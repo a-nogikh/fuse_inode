@@ -25,8 +25,30 @@ int bitmap_get_blocks_count(int bits_needed){
     return DIV_ROUND_UP(DIV_ROUND_UP(bits_needed, 8), BLOCK_SIZE);
 }
 
+int bitmap_find(bitmap_instance *instance, int from_bit){
+
+}
+
+int bitmap_get(bitmap_instance *instance, int bit){
+    return *(instance->bitmap_data + bit/8) & (1 << (bit%8)) > 0 ? 1 : 0;
+}
+
 void bitmap_set(bitmap_instance *instance, int bit, int v){
-    //
+    int byte = bit/8, block = byte / BLOCK_SIZE;
+    type_8bit *val = (type_8bit *)(instance->bitmap_data + byte);
+
+    if (v == 0){
+        *val &= ~(1 << (bit%8));
+    }
+    else{
+        *val |= 1 << (bit%8);
+    }
+
+    if (instance->unflashed_block_id != block){
+        bitmap_flush(instance);
+    }
+
+    instance->unflashed_block_id = block;
 }
 
 void bitmap_clear(bitmap_instance *instance){
@@ -47,4 +69,5 @@ void bitmap_flush(bitmap_instance *instance){
 
 void bitmap_free(bitmap_instance *instance){
     free(instance->bitmap_data);
+    free(instance);
 }
