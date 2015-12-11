@@ -26,14 +26,34 @@ int bitmap_get_blocks_count(int bits_needed){
 }
 
 int bitmap_find(bitmap_instance *instance, int from_bit){
+    int offset = 0, count = instance->bits_count/8, from = from_bit / 8;
+    for(; offset < count; offset++){
+        type_8bit val = *(instance->bitmap_data + (offset + from) % count);
+        if (~val == 0){ continue; }
 
+        int j = (offset == 0) ? 1 : (from_bit % 8);
+        for(; j < 8; j++){
+            if (val & (1 << j)){
+                return (from + offset)%count + j;
+            }
+        }
+    }
+    return -1;
 }
 
 int bitmap_get(bitmap_instance *instance, int bit){
+    if (bit > instance->bits_count){
+        return -1;
+    }
+
     return *(instance->bitmap_data + bit/8) & (1 << (bit%8)) > 0 ? 1 : 0;
 }
 
 void bitmap_set(bitmap_instance *instance, int bit, int v){
+    if (bit > instance->bits_count){
+        return;
+    }
+
     int byte = bit/8, block = byte / BLOCK_SIZE;
     type_8bit *val = (type_8bit *)(instance->bitmap_data + byte);
 

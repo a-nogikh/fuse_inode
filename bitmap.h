@@ -10,5 +10,15 @@ struct bitmap_instance{
     int bits_count;
 };
 
+typedef struct bitmap_instance bitmap_instance;
+
+bitmap_instance * bitmap_init(int from_block, int to_block);
+int bitmap_get_blocks_count(int bits_needed);
+int bitmap_find(bitmap_instance *instance, int from_bit);
+int bitmap_get(bitmap_instance *instance, int bit);
+void bitmap_set(bitmap_instance *instance, int bit, int v);
+void bitmap_clear(bitmap_instance *instance);
+void bitmap_flush(bitmap_instance *instance);
+void bitmap_free(bitmap_instance *instance);
 
 #endif // BITMAP_H_INCLUDED
