@@ -39,6 +39,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="device.h" />
+		<Unit filename="fs.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="fs.h" />
+		<Unit filename="inode.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="inode.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
