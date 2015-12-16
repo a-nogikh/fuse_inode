@@ -7,10 +7,11 @@
 bitmap_instance * bitmap_init(int from_block, int to_block){
     int bytes = (to_block - from_block + 1) * BLOCK_SIZE;
     bitmap_instance *instance = (bitmap_instance *)malloc(sizeof(bitmap_instance));
-    instance->bitmap_data = (type_8bit *)malloc(sizeof(type_8bit) * bytes)
+    instance->bitmap_data = (type_8bit *)malloc(sizeof(type_8bit) * bytes);
     instance->bits_count = bytes * 8;
     instance->from_block = from_block;
     instance->to_block = to_block;
+    instance->curr_bit = 0;
     instance->unflashed_block_id = -1;
 
     int i;
@@ -26,10 +27,15 @@ int bitmap_get_blocks_count(int bits_needed){
 }
 
 int bitmap_find(bitmap_instance *instance, int from_bit){
+    if (from_bit == -1){
+        from_bit = instance->curr_bit;
+    }
+
     int offset = 0, count = instance->bits_count/8, from = from_bit / 8;
     for(; offset < count; offset++){
         type_8bit val = *(instance->bitmap_data + (offset + from) % count);
         if (~val == 0){ continue; }
+        instance->curr_bit = ((offset + from) % count)*8;
 
         int j = (offset == 0) ? 1 : (from_bit % 8);
         for(; j < 8; j++){

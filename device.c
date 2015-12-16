@@ -30,6 +30,12 @@ void device_write_block_ofs(int n, char *src, int ofs, int len){
     fwrite(src, sizeof(char), len, file);
 }
 
+void device_clear_block(int n, char fill){
+    char tmp[BLOCK_SIZE];
+    memset(tmp, fill, BLOCK_SIZE);
+    device_write_block(n, tmp);
+}
+
 void device_read_block(int n, char *dst){
     seek_to_block(n, 0);
     size_t read_result = fread(dst, sizeof(char), BLOCK_SIZE, file);
