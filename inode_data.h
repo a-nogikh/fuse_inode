@@ -4,9 +4,9 @@
 #include "fs.h"
 #include "inode.h"
 
-#define CACHED_LEVEL_1 0
-#define CACHED_LEVEL_2_1 1
-#define CACHED_LEVEL_2_2 2
+#define CACHED_DIRECT_POINTERS 0
+#define CACHED_INDIRECT_1 1
+#define CACHED_INDIRECT_2 2
 
 struct opened_file {
     inode *inode;
@@ -22,5 +22,6 @@ struct opened_file {
 };
 typedef struct opened_file opened_file;
 
+int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset);
 
 #endif // INODE_DATA_H_INCLUDED

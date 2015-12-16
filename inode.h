@@ -15,7 +15,8 @@ struct inode{
     int size, blocks_count;
 
     block_n blocks[INODE_INNER_BLOCKS];
-    int level_1_block, level_2_block;
+    int direct_pointers;
+    int indirect_pointers;
 };
 typedef struct inode inode;
 

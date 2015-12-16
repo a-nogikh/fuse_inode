@@ -28,17 +28,17 @@ int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset){
             return_block = inode->blocks[i];
         }
         else if (i >= INODE_INNER_BLOCKS && (i < INODE_INNER_BLOCKS + INODE_LINKS_PER_BLOCK)){
-            if (inode->level_1_block != INODE_EMPTY_BLOCK){
-                load_block(handle, inode->level_1_block, CACHED_LEVEL_1);
+            if (inode->direct_pointers != INODE_EMPTY_BLOCK){
+                load_block(handle, inode->direct_pointers, CACHED_DIRECT_POINTERS);
             }
-            else if (create_block(handle, & inode->level_1_block, CACHED_LEVEL_1)){
+            else if (create_block(handle, & inode->direct_pointers, CACHED_DIRECT_POINTERS)){
                 handle->flushed = 0;
             }
             else{
                 return -1;
             }
 
-            block_n *level_1 = (block_n *)handle->cached_blocks[CACHED_LEVEL_1];
+            block_n *level_1 = (block_n *)handle->cached_blocks[CACHED_DIRECT_POINTERS];
             int pos = (i-INODE_INNER_BLOCKS);
             if (level_1[pos] != INODE_EMPTY_BLOCK){
                 return_block = level_1[pos];
@@ -51,15 +51,15 @@ int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset){
             }
 
             level_1[pos] = new_block;
-            handle->cached_block_flushed[CACHED_LEVEL_1] = 0;
+            handle->cached_block_flushed[CACHED_DIRECT_POINTERS] = 0;
             return_block = new_block;
         }
         else{
             int pos = i - INODE_INNER_BLOCKS - INODE_LINKS_PER_BLOCK;
-            if (inode->level_2_block != INODE_EMPTY_BLOCK){
-                 load_block(handle, inode->level_2_block, CACHED_LEVEL_2_1);
+            if (inode->indirect_pointers != INODE_EMPTY_BLOCK){
+                 load_block(handle, inode->indirect_pointers, CACHED_INDIRECT_1);
             }
-            else if (create_block(disk_bitmap, handle, &inode->level_2_block, CACHED_LEVEL_2_1)){
+            else if (create_block(disk_bitmap, handle, &inode->indirect_pointers, CACHED_INDIRECT_1)){
                 handle->flushed = 0;
             }
             else{
@@ -70,13 +70,13 @@ int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset){
             block_n *level_2 = (block_n *)handle->cached_blocks[CACHED_LEVEL_2];
 
             if(level_2[pos_1] != INODE_EMPTY_BLOCK){
-                load_block(handle, level_2[pos_1], CACHED_LEVEL_2_2);
+                load_block(handle, level_2[pos_1], CACHED_INDIRECT_2);
             }
-            else if (!create_block(handle, level_2 + pos_1, CACHED_LEVEL_2_2)){
+            else if (!create_block(handle, level_2 + pos_1, CACHED_INDIRECT_2)){
                 return -1;
             }
 
-            block_n *blocks = (block_n *)handle->cached_blocks[CACHED_LEVEL_2_2];
+            block_n *blocks = (block_n *)handle->cached_blocks[CACHED_INDIRECT_2];
             if (blocks[pos_2] != INODE_EMPTY_BLOCK){
                 return_block = blocks[pos_2];
                 continue;
@@ -88,7 +88,7 @@ int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset){
             }
 
             blocks[pos_2] = new_block;
-            handle->cached_block_flushed[CACHED_LEVEL_2_2] = 0;
+            handle->cached_block_flushed[CACHED_INDIRECT_2] = 0;
             return_block = new_block;
         }
     }

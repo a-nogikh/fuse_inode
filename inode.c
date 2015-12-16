@@ -49,8 +49,8 @@ inode *inode_make(bitmap_instance *bitmap){
         inode->blocks[i] = INODE_EMPTY_BLOCK;
     }
 
-    inode->level_1_block = INODE_EMPTY_BLOCK;
-    inode->level_2_block = INODE_EMPTY_BLOCK;
+    inode->direct_pointers = INODE_EMPTY_BLOCK;
+    inode->indirect_pointers = INODE_EMPTY_BLOCK;
 
     return inode;
 }
