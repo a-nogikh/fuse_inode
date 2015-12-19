@@ -2,16 +2,16 @@
 #include "inode.h"
 #include "fs.h"
 
-int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset){
-    inode *inode = handle->inode;
-    int block = offset / BLOCK_SIZE, now_blocks = inode->blocks_count;
-    int i = block < now_blocks ? block : now_blocks;
+int inode_flush_data(opened_file *opened);
 
+int fs_get_disk_block_id(opened_file *handle, int seq_block){
+    inode *inode = handle->inode;
+    int now_blocks = inode->blocks_count;
+    int i = seq_block < now_blocks ? block : now_blocks;
 
     block_n return_block = 0;
-    int flush_inode_block = 0;
 
-    for (; i <= block; i++){
+    for (; i <= seq_block; i++){
         if (i < INODE_INNER_BLOCKS){
             if (inode->blocks[i] != INODE_EMPTY_BLOCK){
                 return_block = inode->blocks[i];
@@ -24,6 +24,7 @@ int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset){
             }
 
             inode->blocks[i] = new_block;
+            inode->blocks_count++;
             handle->flushed = 0;
             return_block = inode->blocks[i];
         }
@@ -51,6 +52,8 @@ int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset){
             }
 
             level_1[pos] = new_block;
+            inode->blocks_count++;
+            handle->flushed = 0;
             handle->cached_block_flushed[CACHED_DIRECT_POINTERS] = 0;
             return_block = new_block;
         }
@@ -89,6 +92,8 @@ int fs_get_block_id(opened_file *handle, bitmap *disk_bitmap, int offset){
 
             blocks[pos_2] = new_block;
             handle->cached_block_flushed[CACHED_INDIRECT_2] = 0;
+            inode->blocks++;
+            handle->flushed = 0;
             return_block = new_block;
         }
     }
@@ -149,7 +154,7 @@ static int create_block(opened_file *opened, block_n *dest_id, int type){
 int inode_flush_data(opened_file *opened)
 {
     int i = 0;
-    for (; i < 3; i++){
+    for (; i < CACHED_COUNT; i++){
         if (opened->cached_block_flushed[i] == 1){
             continue;
         }
