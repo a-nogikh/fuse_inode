@@ -1,6 +1,7 @@
 #include "device.h"
 #include <stdlib.h>
-#include <string>
+#include <string.h>
+#include <stdio.h>
 
 FILE *file = NULL;
 

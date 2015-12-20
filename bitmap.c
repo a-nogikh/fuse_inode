@@ -3,6 +3,7 @@
 #include "utils.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 bitmap_instance * bitmap_init(int from_block, int to_block){
     int bytes = (to_block - from_block + 1) * BLOCK_SIZE;
@@ -24,6 +25,10 @@ bitmap_instance * bitmap_init(int from_block, int to_block){
 
 int bitmap_get_blocks_count(int bits_needed){
     return DIV_ROUND_UP(DIV_ROUND_UP(bits_needed, 8), BLOCK_SIZE);
+}
+
+int bitmap_bits_from_blocks(int blocks){
+    return blocks * 8;
 }
 
 int bitmap_find(bitmap_instance *instance, int from_bit){

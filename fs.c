@@ -3,68 +3,126 @@
 // meta -> inode_bitmap -> inode -> disk_bitmap -> disk
 
 void fs_create(int disk_blocks, int total_inodes){
-    int inode_blocks = inode_get_size(total_inodes);
+    // adjusting total disk blocks to fit in the allocated bitmap
     int disk_bitmap_size = bitmap_get_blocks_count(disk_blocks);
+    disk_blocks = bitmap_bits_from_blocks(disk_bitmap_size);
+
+    int inode_blocks = inode_get_size(total_inodes);
     int inode_bitmap_size = bitmap_get_blocks_count(total_inodes);
-    meta *meta = (meta *)malloc(sizeof(meta));
-    meta->blocks_count = 1 + inode_blocks + disk_bitmap_size + inode_bitmap_size + disk_blocks;
-    meta->inode_bitmap_fist_block = meta->disk_bitmap_last_block + 1;
-    meta->inode_bitmap_last_block = meta->inode_bitmap_fist_block + inode_bitmap_size;
-    meta->inode_first_block = meta->inode_bitmap_last_block + 1;
-    meta->inode_last_block = meta->inode_first_block + inode_blocks;
-    meta->disk_bitmap_first_block = meta;
-    meta->disk_bitmap_last_block = meta->disk_bitmap_first_block + disk_bitmap_size;
-    meta->disk_first_block = meta->disk_bitmap_last_block + 1;
-    meta->disk_bitmap_last_block = meta->disk_bitmap_last_block + disk_blocks;
-    meta->root_inode = 0;
-    // meta->inode_current = 0; --> добавить
+    meta *meta_i = (meta *)malloc(sizeof(meta));
+    meta_i->magic_number = FS_MAGIC;
+    meta_i->blocks_count = 1 + inode_blocks + disk_bitmap_size + inode_bitmap_size + disk_blocks;
+    meta_i->inode_bitmap_fist_block = meta_i->disk_bitmap_last_block + 1;
+    meta_i->inode_bitmap_last_block = meta_i->inode_bitmap_fist_block + inode_bitmap_size - 1;
+    meta_i->inode_first_block = meta_i->inode_bitmap_last_block + 1;
+    meta_i->inode_last_block = meta_i->inode_first_block + inode_blocks - 1;
+    meta_i->disk_bitmap_first_block = meta_i->inode_last_block + 1;
+    meta_i->disk_bitmap_last_block = meta_i->disk_bitmap_first_block + disk_bitmap_size - 1;
+    meta_i->disk_first_block = meta_i->disk_bitmap_last_block + 1;
+    meta_i->disk_bitmap_last_block = meta_i->disk_bitmap_last_block + disk_blocks - 1;
+    meta_i->root_inode = 0;
+    meta_i->used_inodes = 0;
 
     char tmp[BLOCK_SIZE];
-    int i = 0;
-    for (; i < BLOCK_SIZE; i++){
-        tmp[i] = 0;
-    }
+    memset(tmp, 0, BLOCK_SIZE);
 
-    for (int i = 0; i < meta->blocks_count; i++){
+    int i = 0;
+    for (; i < meta_i->blocks_count; i++){
         device_write_block(i, tmp);
     }
 
-    device_write_block_ofs(0, (char *)meta, 0, sizeof(meta));
+    // root inode
+    bitmap_instance *inode_bitmap = bitmap_init(meta_i->inode_bitmap_fist_block, meta_i->inode_bitmap_last_block);
+    inode_t *node = inode_make(inode_bitmap);
+    node->type = INODE_DIRECTORY;
+    inode_save(node);
 
-    // add 1 inode, empty content
+    meta_i->root_inode = node->id;
+    meta_i->used_inodes++;
+    device_write_block_ofs(0, (char *)meta_i, 0, sizeof(meta));
 
+    inode_free(node);
+    bitmap_free(inode_bitmap);
+    free(meta_i);
 }
 
 fs_info *fs_open(){
-
-}
-
-opened_file *fs_open_inode(fs_info *info, inode *node){
-    opened_file *handle = (opened_file *)malloc(sizeof(opened_file));
-    opened_file->flushed = 1;
-    opened_file->inode = node;
-    opened_file->inode_bitmap = info->inode_bitmap;
-    opened_file->disk_bitmap = info->disk_bitmap;
-    opened_file->meta = info->meta;
-    int i = 0;
-    for (; i < CACHED_COUNT; i++){
-        opened_file->cached_block_ids[i] = -1;
+    meta *meta_i = (meta *)malloc(sizeof(meta));
+    device_read_block_ofs(0, (char *)meta_i, 0, sizeof(meta));
+    if (meta_i->magic_number != FS_MAGIC){
+        free(meta_i);
+        return NULL;
     }
 
-    return opened_file;
+    bitmap_instance *inode_bitmap = bitmap_init(meta_i->inode_bitmap_fist_block, meta_i->inode_bitmap_last_block);
+    bitmap_instance *disk_bitmap = bitmap_init(meta_i->disk_bitmap_first_block, meta_i->disk_bitmap_last_block);
+
+    inode_init(meta_i->inode_first_block, meta_i->inode_last_block);
+
+    fs_info *fs = (fs_info *)malloc(sizeof(fs_info));
+    fs->disk_bitmap = disk_bitmap;
+    fs->inode_bitmap = inode_bitmap;
+    fs->meta = meta_i;
+
+    inode_t *root_inode = inode_find(meta_i->root_inode);
+    if (root_inode == NULL){
+        free(meta_i);
+        free(fs);
+        bitmap_free(disk_bitmap);
+        bitmap_free(inode_bitmap);
+        return NULL;
+    }
+    fs->root_inode = fs_open_inode(fs, root_inode);
+    return fs;
 }
 
-void fs_dir_add_file(opened_file *opened, char *name, int inode_n){
+void fs_flush(fs_info *info){
+    device_write_block_ofs(0, (char *)(info->meta), 0, sizeof(meta));
+    bitmap_flush(info->disk_bitmap);
+    bitmap_flush(info->inode_bitmap);
+    inode_flush_data(info->root_inode);
+}
+
+opened_file *fs_open_inode(fs_info *info, inode_t *inode){
+    opened_file *handle = (opened_file *)malloc(sizeof(opened_file));
+    handle->flushed = 1;
+    handle->inode = inode;
+    handle->inode_bitmap = info->inode_bitmap;
+    handle->disk_bitmap = info->disk_bitmap;
+    handle->meta = info->meta;
+    int i = 0;
+    for (; i < CACHED_COUNT; i++){
+        handle->cached_block_ids[i] = -1;
+    }
+
+    return handle;
+}
+
+void fs_close_file(opened_file *opened){
+    inode_flush_data(opened);
+    free(opened);
+}
+
+int fs_dir_add_file(opened_file *opened, char *name, int inode_n){
+    if (opened->inode->type != INODE_DIRECTORY){
+        return 0;
+    }
+
     int len = strlen(name), struct_len = len + sizeof(int) + sizeof(char);
     char *add = (char *)malloc(struct_len), *pos = add;
     *((int *)pos) = inode_n; pos += sizeof(int);
     *pos++ = (char)len;
     memcpy(pos, name, len);
-    fs_io(opened, opened->inode->size, struct_len, FS_IO_WRITE);
+    fs_io(opened, opened->inode->size, struct_len, add, FS_IO_WRITE);
     free(add);
+    return 1;
 }
 
 linked_file_list *fs_readdir(opened_file *opened){
+    if (opened->inode->type != INODE_DIRECTORY){
+        return NULL;
+    }
+
     char *data = (char *)malloc(sizeof(char) * opened->inode->size + 256 + sizeof(block_n));
     fs_io(opened, 0, opened->inode->size, data, FS_IO_READ);
 
@@ -89,7 +147,7 @@ linked_file_list *fs_readdir(opened_file *opened){
     }
 
     free(data);
-    return NULL;
+    return list;
 }
 
 int fs_find_file(opened_file *directory, char *file){
@@ -106,19 +164,38 @@ int fs_find_file(opened_file *directory, char *file){
     return result;
 }
 
-void fs_free_readdir(linked_file_list *list){
-    linked_file_list *curr = list, *tmp;
-    while(curr != NULL){
-        tmp = curr;
-        curr = curr->next;
-        free(tmp->name);
-        free(tmp);
+int fs_find_inode(fs_info *info, char *path){
+    if (*path == '/'){
+        path++;
     }
-}
 
-int fs_find_inode(char *path){
-    // explode ...
-    return -1;
+    int found_inode = -1, last_inode = -1;
+    opened_file *curr = info->root_inode;
+    char buf[FS_MAX_FILE_NAME + 1];
+
+    while(1){
+        int len = str_take_till(path, buf, '/', FS_MAX_FILE_NAME);
+        if (len <= 0){
+            found_inode = last_inode;
+            break;
+        }
+        path += len + 1;
+        buf[len] = 0;
+
+        int inode = fs_find_file(curr, buf);
+        if (inode < 0){
+            break;
+        }
+
+        if (curr != info->root_inode){
+            fs_close_file(curr);
+        }
+
+        curr = fs_open_inode(info, inode);
+        last_inode = inode;
+    }
+
+    return found_inode;
 }
 
 int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
@@ -168,9 +245,19 @@ int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
         }
     }
 
-    if (!opened->inode->flushed){
+    if (!opened->flushed){
         inode_flush_data(opened);
     }
 
     return processed;
+}
+
+void fs_free_readdir(linked_file_list *list){
+    linked_file_list *curr = list, *tmp;
+    while(curr != NULL){
+        tmp = curr;
+        curr = curr->next;
+        free(tmp->name);
+        free(tmp);
+    }
 }

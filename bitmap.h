@@ -15,6 +15,7 @@ typedef struct bitmap_instance bitmap_instance;
 
 bitmap_instance * bitmap_init(int from_block, int to_block);
 int bitmap_get_blocks_count(int bits_needed);
+int bitmap_bits_from_blocks(int blocks);
 int bitmap_find(bitmap_instance *instance, int from_bit);
 int bitmap_get(bitmap_instance *instance, int bit);
 void bitmap_set(bitmap_instance *instance, int bit, int v);

@@ -1,13 +1,11 @@
 #include "inode_data.h"
-#include "inode.h"
 #include "fs.h"
 
-int inode_flush_data(opened_file *opened);
 
 int fs_get_disk_block_id(opened_file *handle, int seq_block){
-    inode *inode = handle->inode;
+    inode_t *inode = handle->inode;
     int now_blocks = inode->blocks_count;
-    int i = seq_block < now_blocks ? block : now_blocks;
+    int i = seq_block < now_blocks ? seq_block : now_blocks;
 
     block_n return_block = 0;
 
@@ -62,7 +60,7 @@ int fs_get_disk_block_id(opened_file *handle, int seq_block){
             if (inode->indirect_pointers != INODE_EMPTY_BLOCK){
                  load_block(handle, inode->indirect_pointers, CACHED_INDIRECT_1);
             }
-            else if (create_block(disk_bitmap, handle, &inode->indirect_pointers, CACHED_INDIRECT_1)){
+            else if (create_block(handle->disk_bitmap, handle, &inode->indirect_pointers, CACHED_INDIRECT_1)){
                 handle->flushed = 0;
             }
             else{
@@ -70,7 +68,7 @@ int fs_get_disk_block_id(opened_file *handle, int seq_block){
             }
 
             int pos_1 = pos / INODE_LINKS_PER_BLOCK, pos_2 = pos % INODE_LINKS_PER_BLOCK;
-            block_n *level_2 = (block_n *)handle->cached_blocks[CACHED_LEVEL_2];
+            block_n *level_2 = (block_n *)handle->cached_blocks[CACHED_INDIRECT_1];
 
             if(level_2[pos_1] != INODE_EMPTY_BLOCK){
                 load_block(handle, level_2[pos_1], CACHED_INDIRECT_2);
@@ -92,7 +90,7 @@ int fs_get_disk_block_id(opened_file *handle, int seq_block){
 
             blocks[pos_2] = new_block;
             handle->cached_block_flushed[CACHED_INDIRECT_2] = 0;
-            inode->blocks++;
+            inode->blocks_count++;
             handle->flushed = 0;
             return_block = new_block;
         }
@@ -102,7 +100,7 @@ int fs_get_disk_block_id(opened_file *handle, int seq_block){
     return return_block;
 }
 
-static block_n create_disk_block(opened_file *instance){
+ block_n create_disk_block(opened_file *instance){
     int pos = bitmap_find(instance->disk_bitmap, -1);
     if (pos < 0){
         return -1;
@@ -116,11 +114,11 @@ static block_n create_disk_block(opened_file *instance){
 static void fill_block(char *block, block_n val){
     int i = 0;
     for (; i < INODE_LINKS_PER_BLOCK; i++){
-        (block_n *)(block)[i] = val;
+        *((block_n *)(block) + i) = val;
     }
 }
 
-static void load_block(opened_file *opened, block_n dest_id, int type){
+void load_block(opened_file *opened, block_n dest_id, int type){
     if (opened->cached_block_ids[type] == dest_id){
         return;
     }
@@ -135,9 +133,10 @@ static void load_block(opened_file *opened, block_n dest_id, int type){
     opened->cached_block_flushed[type] = 1;
 }
 
-static int create_block(opened_file *opened, block_n *dest_id, int type){
+int create_block(opened_file *opened, block_n *dest_id, int type){
     if(*dest_id != INODE_EMPTY_BLOCK && opened->cached_block_flushed[type] == 0){
-        device_write_block(opened->meta->disk_first_block + opened->cached_block_ids[type]);
+        device_write_block(opened->meta->disk_first_block + opened->cached_block_ids[type],
+                   opened->cached_blocks[type]);
     }
 
     fill_block(opened->cached_blocks[type], -1);
@@ -151,7 +150,7 @@ static int create_block(opened_file *opened, block_n *dest_id, int type){
     *dest_id = disk_n;
 }
 
-int inode_flush_data(opened_file *opened)
+void inode_flush_data(opened_file *opened)
 {
     int i = 0;
     for (; i < CACHED_COUNT; i++){
