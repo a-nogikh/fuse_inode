@@ -24,11 +24,15 @@ bitmap_instance * bitmap_init(int from_block, int to_block){
 }
 
 int bitmap_get_blocks_count(int bits_needed){
-    return DIV_ROUND_UP(DIV_ROUND_UP(bits_needed, 8), BLOCK_SIZE);
+    int val =  DIV_ROUND_UP(DIV_ROUND_UP(bits_needed, 8), BLOCK_SIZE);
+    if (bits_needed > 0 && val == 0){
+        return 1;
+    }
+    return val;
 }
 
 int bitmap_bits_from_blocks(int blocks){
-    return blocks * 8;
+    return blocks * BLOCK_SIZE * 8;
 }
 
 int bitmap_find(bitmap_instance *instance, int from_bit){
@@ -42,10 +46,10 @@ int bitmap_find(bitmap_instance *instance, int from_bit){
         if (~val == 0){ continue; }
         instance->curr_bit = ((offset + from) % count)*8;
 
-        int j = (offset == 0) ? 1 : (from_bit % 8);
+        int j = (offset == 0) ? (from_bit % 8) : 0;
         for(; j < 8; j++){
-            if (val & (1 << j)){
-                return (from + offset)%count + j;
+            if (!(val & (1 << j))){
+                return ((from + offset)%count) * 8 + j;
             }
         }
     }

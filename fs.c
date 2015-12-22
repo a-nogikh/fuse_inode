@@ -12,7 +12,7 @@ void fs_create(int disk_blocks, int total_inodes){
     meta *meta_i = (meta *)malloc(sizeof(meta));
     meta_i->magic_number = FS_MAGIC;
     meta_i->blocks_count = 1 + inode_blocks + disk_bitmap_size + inode_bitmap_size + disk_blocks;
-    meta_i->inode_bitmap_fist_block = meta_i->disk_bitmap_last_block + 1;
+    meta_i->inode_bitmap_fist_block = 1;
     meta_i->inode_bitmap_last_block = meta_i->inode_bitmap_fist_block + inode_bitmap_size - 1;
     meta_i->inode_first_block = meta_i->inode_bitmap_last_block + 1;
     meta_i->inode_last_block = meta_i->inode_first_block + inode_blocks - 1;
@@ -32,9 +32,11 @@ void fs_create(int disk_blocks, int total_inodes){
     }
 
     // root inode
+    inode_init(meta_i->inode_first_block, meta_i->inode_last_block);
     bitmap_instance *inode_bitmap = bitmap_init(meta_i->inode_bitmap_fist_block, meta_i->inode_bitmap_last_block);
     inode_t *node = inode_make(inode_bitmap);
     node->type = INODE_DIRECTORY;
+    node->tmp = 123;
     inode_save(node);
 
     meta_i->root_inode = node->id;
@@ -94,6 +96,28 @@ opened_file *fs_open_inode(fs_info *info, inode_t *inode){
     for (; i < CACHED_COUNT; i++){
         handle->cached_block_ids[i] = -1;
     }
+
+    return handle;
+}
+
+opened_file *fs_create_file(fs_info *info){
+    inode_t *inode = inode_make(info->inode_bitmap);
+    if (inode == NULL){
+        return NULL;
+    }
+
+    opened_file *handle = (opened_file *)malloc(sizeof(opened_file));
+    handle->flushed = 0;
+    handle->inode = inode;
+    handle->inode_bitmap = info->inode_bitmap;
+    handle->disk_bitmap = info->disk_bitmap;
+    handle->meta = info->meta;
+    int i = 0;
+    for (; i < CACHED_COUNT; i++){
+        handle->cached_block_ids[i] = -1;
+    }
+
+    inode_save(handle->inode);
 
     return handle;
 }
@@ -202,7 +226,7 @@ int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
     int tmp_ofs = offset % BLOCK_SIZE, bl_ofs = 0;
 
     int pos = offset, maxpos = offset + count, processed = 0;
-    if (maxpos > opened->inode->size){
+    if (maxpos > opened->inode->size && dir == FS_IO_READ){
         maxpos = opened->inode->size;
     }
 
@@ -225,13 +249,13 @@ int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
 
         if (dir == FS_IO_WRITE){
             device_write_block_ofs(
-               real_block, buf + (pos - offset),
+               real_block + opened->meta->disk_first_block, buf + (pos - offset),
                from, count
             );
         }
         else if (dir == FS_IO_READ){
             device_read_block_ofs(
-               real_block, buf + (pos - offset),
+               real_block + opened->meta->disk_first_block, buf + (pos - offset),
                from, count
             );
         }

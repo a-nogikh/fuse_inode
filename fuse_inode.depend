@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1450694080 source:c:\fuse_inode\bitmap.c
+1450818304 source:c:\fuse_inode\bitmap.c
 	"bitmap.h"
 	"device.h"
 	"utils.h"
@@ -7,50 +7,51 @@
 	<stdio.h>
 	<stdlib.h>
 
-1450596999 c:\fuse_inode\bitmap.h
+1450816346 c:\fuse_inode\bitmap.h
 
-1449817689 c:\fuse_inode\device.h
+1449746024 c:\fuse_inode\device.h
 
-1450598831 c:\fuse_inode\utils.h
+1450816346 c:\fuse_inode\utils.h
 
-1450598888 source:c:\fuse_inode\device.c
+1450816346 source:c:\fuse_inode\device.c
 	"device.h"
 	<stdlib.h>
 	<string.h>
 	<stdio.h>
 
-1450600180 source:c:\fuse_inode\fs.c
+1450819915 source:c:\fuse_inode\fs.c
 	"fs.h"
 
-1450600428 c:\fuse_inode\fs.h
+1450818754 c:\fuse_inode\fs.h
 	"bitmap.h"
 	"inode.h"
 	"device.h"
 	<stdio.h>
 
-1450600001 c:\fuse_inode\inode.h
+1450819100 c:\fuse_inode\inode.h
 	"bitmap.h"
 
-1450600435 source:c:\fuse_inode\inode.c
+1450819372 source:c:\fuse_inode\inode.c
 	"inode.h"
 	"device.h"
 	"utils.h"
 	<stdlib.h>
 	"inode_data.h"
 
-1450600649 c:\fuse_inode\inode_data.h
+1450816346 c:\fuse_inode\inode_data.h
 	"fs.h"
 	"inode.h"
 
-1450600655 source:c:\fuse_inode\inode_data.c
+1450819888 source:c:\fuse_inode\inode_data.c
 	"inode_data.h"
 	"fs.h"
 
-1450598217 source:c:\fuse_inode\utils.c
+1450816346 source:c:\fuse_inode\utils.c
 	"utils.h"
 
-1450693963 source:c:\fuse_inode\main.c
+1450820204 source:c:\fuse_inode\main.c
 	<stdio.h>
 	<stdlib.h>
 	"bitmap.h"
+	"fs.h"
 

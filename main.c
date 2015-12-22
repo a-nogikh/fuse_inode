@@ -1,30 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "bitmap.h"
+#include "fs.h"
 
 int main()
 {
     device_init("C:\\fuse_inode\\device.txt");
-    bitmap_instance *bitmap = bitmap_init(0, 10);
-    bitmap_set(bitmap, 0, 1);
-    int z = bitmap_find(bitmap, 0);
-    printf("%d", z);
-    return 0;
+    fs_create(1000, 1000);
+    fs_info *fs = fs_open();
 
+    opened_file *file = fs_create_file(fs);
+    fs_dir_add_file(fs->root_inode, "test.txt", file->inode->id);
+    const char *data = "Test text";
+    fs_io(file, 0, strlen(data), data, FS_IO_WRITE);
 
-        int i = 0;
-        for(; i < bitmap->bits_count; i ++){
-            if (bitmap_get(bitmap, i)){
-                printf("%d\n", i);
-            }
-        }
-    /*
-    bitmap_set(bitmap, 10, 1);
-    bitmap_set(bitmap, 100, 1);
-    bitmap_set(bitmap, 1000, 1);
-    bitmap_set(bitmap, 10000, 1);
-    bitmap_flush(bitmap);
-*/
-    printf("Hello world!\n");
+    char data2[1024];
+    memset(data2, 0, sizeof(data));
+    fs_io(file, 0, file->inode->size, data2, FS_IO_READ);
+    printf("%s", data2);
+
+    fs_close_file(file);
+    fs_flush(fs);
+
     return 0;
 }

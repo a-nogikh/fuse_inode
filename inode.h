@@ -14,7 +14,7 @@ typedef enum {INODE_FILE, INODE_DIRECTORY} inode_type;
 struct inode_t{
     int id;
     inode_type type;
-    int size, blocks_count;
+    int size, blocks_count, tmp;
 
     block_n blocks[INODE_INNER_BLOCKS];
     int direct_pointers;
