@@ -57,7 +57,11 @@ int bitmap_get(bitmap_instance *instance, int bit){
         return -1;
     }
 
-    return *(instance->bitmap_data + bit/8) & (1 << (bit%8)) > 0 ? 1 : 0;
+    int res = *((type_8bit *)instance->bitmap_data + bit/8) & (1 << (bit%8));
+    if (res > 0){
+        return 1;
+    }
+    return 0;
 }
 
 void bitmap_set(bitmap_instance *instance, int bit, int v){
@@ -84,6 +88,10 @@ void bitmap_set(bitmap_instance *instance, int bit, int v){
 
 void bitmap_clear(bitmap_instance *instance){
     memset(instance->bitmap_data, 0, sizeof(type_8bit));
+    int i = instance->from_block;
+    for (; i <= instance->to_block; i++){
+        device_write_block(i, instance->bitmap_data + i * BLOCK_SIZE);
+    }
 }
 
 void bitmap_flush(bitmap_instance *instance){

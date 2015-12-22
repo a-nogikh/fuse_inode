@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1450598872 source:c:\fuse_inode\bitmap.c
+1450694080 source:c:\fuse_inode\bitmap.c
 	"bitmap.h"
 	"device.h"
 	"utils.h"
@@ -45,4 +45,12 @@
 1450600655 source:c:\fuse_inode\inode_data.c
 	"inode_data.h"
 	"fs.h"
+
+1450598217 source:c:\fuse_inode\utils.c
+	"utils.h"
+
+1450693963 source:c:\fuse_inode\main.c
+	<stdio.h>
+	<stdlib.h>
+	"bitmap.h"
 
