@@ -25,7 +25,7 @@ inode_t *inode_find(int id){
     }
 
     inode_t *result = (inode_t *)malloc(sizeof(inode_t));
-    device_read_block_ofs(block_id, (char *)result, block_id + (id % per_block) * sizeof(inode_t), sizeof(inode_t));
+    device_read_block_ofs(block_id, (char *)result, (id % per_block) * sizeof(inode_t), sizeof(inode_t));
     return result;
 }
 
@@ -33,7 +33,7 @@ void inode_save(inode_t *inode){
     int block_id = inode->id / per_block + starting_block;
     if (block_id <= ending_block){
         device_write_block_ofs(block_id, (char *)inode,
-           block_id + (inode->id % per_block) * sizeof(inode_t), sizeof(inode_t));
+           (inode->id % per_block) * sizeof(inode_t), sizeof(inode_t));
     }
 }
 

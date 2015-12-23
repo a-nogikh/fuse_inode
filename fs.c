@@ -36,7 +36,6 @@ void fs_create(int disk_blocks, int total_inodes){
     bitmap_instance *inode_bitmap = bitmap_init(meta_i->inode_bitmap_fist_block, meta_i->inode_bitmap_last_block);
     inode_t *node = inode_make(inode_bitmap);
     node->type = INODE_DIRECTORY;
-    node->tmp = 123;
     inode_save(node);
 
     meta_i->root_inode = node->id;
@@ -44,6 +43,7 @@ void fs_create(int disk_blocks, int total_inodes){
     device_write_block_ofs(0, (char *)meta_i, 0, sizeof(meta));
 
     inode_free(node);
+    bitmap_flush(inode_bitmap);
     bitmap_free(inode_bitmap);
     free(meta_i);
 }
@@ -231,7 +231,7 @@ int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
         maxpos = opened->inode->size;
     }
 
-    for(; pos < maxpos; pos++)
+    for(; pos < maxpos; )
     {
         int seq_block = pos / BLOCK_SIZE;
         if (seq_block >= opened->inode->blocks_count && dir == FS_IO_READ){
@@ -247,6 +247,7 @@ int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
             count = BLOCK_SIZE;
         if (count + from > BLOCK_SIZE) count = BLOCK_SIZE - from;
         if (count + pos > maxpos) count = maxpos - pos;
+
 
         if (dir == FS_IO_WRITE){
             device_write_block_ofs(
@@ -267,6 +268,10 @@ int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
         if(pos > opened->inode->size){
             opened->inode->size = pos;
             opened->flushed = 0;
+        }
+
+        if (count == 0){
+            break;
         }
     }
 

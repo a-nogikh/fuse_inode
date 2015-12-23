@@ -60,7 +60,7 @@ int fs_get_disk_block_id(opened_file *handle, int seq_block){
             if (inode->indirect_pointers != INODE_EMPTY_BLOCK){
                  load_block(handle, inode->indirect_pointers, CACHED_INDIRECT_1);
             }
-            else if (create_block(handle->disk_bitmap, handle, &inode->indirect_pointers, CACHED_INDIRECT_1)){
+            else if (create_block( handle, &inode->indirect_pointers, CACHED_INDIRECT_1)){
                 handle->flushed = 0;
             }
             else{
@@ -75,6 +75,9 @@ int fs_get_disk_block_id(opened_file *handle, int seq_block){
             }
             else if (!create_block(handle, level_2 + pos_1, CACHED_INDIRECT_2)){
                 return -1;
+            }
+            else{
+                handle->cached_block_flushed[CACHED_INDIRECT_1] = 0;
             }
 
             block_n *blocks = (block_n *)handle->cached_blocks[CACHED_INDIRECT_2];
@@ -144,6 +147,7 @@ int create_block(opened_file *opened, block_n *dest_id, int type){
     if (disk_n < 0){
         return -1;
     }
+    bitmap_set(opened->disk_bitmap, disk_n, 1);
     device_write_block(disk_n + opened->meta->disk_first_block, opened->cached_blocks[type]);
     opened->cached_block_ids[type] = disk_n;
     opened->cached_block_flushed[type] = 1;
