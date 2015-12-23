@@ -156,8 +156,9 @@ linked_file_list *fs_readdir(opened_file *opened){
 
     char *pos = data, *last = data + opened->inode->size;
     while ( pos < last){
-        len = *(pos++);
         blid = *pos; pos += sizeof(blid);
+        len = *(pos++);
+
 
         linked_file_list *item = (linked_file_list *)malloc(sizeof(linked_file_list));
         item->inode_n = blid;
