@@ -55,3 +55,66 @@
 	"bitmap.h"
 	"fs.h"
 
+1450951580 source:/home/alexander/isi/fuse/bitmap.c
+	"bitmap.h"
+	"device.h"
+	"utils.h"
+	<string.h>
+	<stdio.h>
+	<stdlib.h>
+
+1450951580 /home/alexander/isi/fuse/bitmap.h
+
+1450951580 /home/alexander/isi/fuse/device.h
+
+1450953366 /home/alexander/isi/fuse/utils.h
+
+1450951580 source:/home/alexander/isi/fuse/device.c
+	"device.h"
+	<stdlib.h>
+	<string.h>
+	<stdio.h>
+
+1450953536 source:/home/alexander/isi/fuse/fs.c
+	"fs.h"
+
+1450951580 /home/alexander/isi/fuse/fs.h
+	"bitmap.h"
+	"inode.h"
+	"device.h"
+	<stdio.h>
+
+1450951580 /home/alexander/isi/fuse/inode.h
+	"bitmap.h"
+
+1450951580 source:/home/alexander/isi/fuse/inode.c
+	"inode.h"
+	"device.h"
+	"utils.h"
+	<stdlib.h>
+	"inode_data.h"
+
+1450951580 /home/alexander/isi/fuse/inode_data.h
+	"fs.h"
+	"inode.h"
+
+1450951580 source:/home/alexander/isi/fuse/inode_data.c
+	"inode_data.h"
+	"fs.h"
+
+1450953355 source:/home/alexander/isi/fuse/utils.c
+	"utils.h"
+
+1450951979 source:/home/alexander/isi/fuse/fuse.c
+	<fuse.h>
+	<stdio.h>
+	<string.h>
+	<errno.h>
+	<fcntl.h>
+
+1450953046 source:/home/alexander/isi/fuse/main.c
+	<stdio.h>
+	<stdlib.h>
+	"bitmap.h"
+	"fs.h"
+

@@ -179,7 +179,7 @@ int fs_find_file(opened_file *directory, char *file){
     linked_file_list *list = fs_readdir(directory), *curr = list;
     int result = -1;
     while (curr != NULL){
-        if (stricmp(curr->name, file) == 0){
+        if (strcmp(curr->name, file) == 0){
             result = curr->inode_n;
             break;
         }
@@ -193,8 +193,11 @@ int fs_find_inode(fs_info *info, char *path){
     if (*path == '/'){
         path++;
     }
+    if (!*path){
+        return info->root_inode->inode->id;
+    }
 
-    int found_inode = -1, last_inode = -1;
+    int found_inode = -1, last_inode = -1, skip = 0;
     opened_file *curr = info->root_inode;
     char buf[FS_MAX_FILE_NAME + 1];
 
@@ -204,8 +207,10 @@ int fs_find_inode(fs_info *info, char *path){
             found_inode = last_inode;
             break;
         }
-        path += len + 1;
         buf[len] = 0;
+        while(len-- > 0) path++;
+
+
 
         int inode = fs_find_file(curr, buf);
         if (inode < 0){

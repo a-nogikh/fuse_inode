@@ -3,11 +3,15 @@
 #include "bitmap.h"
 #include "fs.h"
 
-int main()
+int main(int argc, char* argv[])
 {
+    //fuse_init(argc, argv);
+    //return 0;
     device_init("device.txt");
-    //fs_create(1000, 1000);
+   // fs_create(1000, 1000);
     fs_info *fs = fs_open();
+
+    int inode = fs_find_inode(fs, "/");
 
     int inodeid = fs_find_file(fs->root_inode, "test.txt");
     opened_file *f2 = fs_open_inode(fs, inode_find(inodeid));
