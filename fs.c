@@ -74,6 +74,7 @@ fs_info *fs_open(){
         bitmap_free(inode_bitmap);
         return NULL;
     }
+    fs->root_inode = NULL;
     fs->root_inode = fs_open_inode(fs, root_inode);
     return fs;
 }
@@ -88,6 +89,11 @@ void fs_flush(fs_info *info){
 opened_file *fs_open_inode(fs_info *info, inode_t *inode){
     if (inode == NULL){
         return NULL;
+    }
+
+    if (info->root_inode != NULL && info->root_inode->inode != NULL
+            && inode->id == info->root_inode->inode->id){
+        return info->root_inode;
     }
 
     opened_file *handle = (opened_file *)malloc(sizeof(opened_file));
@@ -128,7 +134,8 @@ opened_file *fs_create_file(fs_info *info){
 
 void fs_close_file(opened_file *opened){
     inode_flush_data(opened);
-    free(opened);
+    if (opened->inode->id != opened->meta->root_inode)
+        free(opened);
 }
 
 int fs_dir_add_file(opened_file *opened, char *name, int inode_n){
@@ -214,7 +221,9 @@ int fs_find_inode(fs_info *info, char *path){
         buf[len] = 0;
         while(len-- > 0) path++;
 
-
+        if (curr == NULL){
+            break;
+        }
 
         int inode = fs_find_file(curr, buf);
         if (inode < 0){
@@ -225,7 +234,19 @@ int fs_find_inode(fs_info *info, char *path){
             fs_close_file(curr);
         }
 
-        curr = fs_open_inode(info, inode);
+        inode_t *inode_p = inode_find(inode);
+        if (inode_p == NULL){
+            break;
+        }
+
+        if(inode_p->type != INODE_DIRECTORY){
+            curr = NULL;
+            last_inode = inode;
+            inode_free(inode_p);
+            continue;
+        }
+
+        curr = fs_open_inode(info, inode_p);
         last_inode = inode;
     }
 
@@ -251,6 +272,7 @@ int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
         if (real_block < 0){
             return -1; // error
         }
+        printf("real: %d [%d] ", real_block, opened->inode->id);
 
         int from = pos % BLOCK_SIZE,
             count = BLOCK_SIZE;

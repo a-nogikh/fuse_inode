@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include "fs.h"
 #include "fuse.h"
+#include "utils.h"
 
 static const char *hello_str = "Hello World!\n";
 static const char *hello_path = "/hello";
@@ -106,8 +107,11 @@ static int fuse_open(const char *path, struct fuse_file_info *fi)
 
     opened_file *opened = NULL;
     if (cache[cache_id].inode_n != inode_n){
-        opened = fs_open_inode(fs, inode_find(inode_n));
+        inode_t *inode_s = inode_find(inode_n);
+        printf("[[%d/%d/%d]]", inode_n,inode_s->id, fs->root_inode->inode->id);
+        opened = fs_open_inode(fs, inode_s);
         cache[cache_id].file = opened;
+        cache[cache_id].inode_n = inode_n;
     }
     else
         opened = cache[cache_id].file;
@@ -115,8 +119,8 @@ static int fuse_open(const char *path, struct fuse_file_info *fi)
     if (opened == NULL)
         return -ENOENT;
 
-    if ((fi->flags & 3) != O_RDONLY)
-        return -EACCES;
+/*    if ((fi->flags & 3) != O_RDONLY)
+        return -EACCES; */
 
     fi->fh = cache_id;
     return 0;
@@ -126,6 +130,7 @@ static int fuse_read(const char *path, char *buf, size_t size, off_t offset,
       struct fuse_file_info *fi)
 {
     opened_file *opened = NULL;
+    printf("TRY READ[%d/%d/%d]", fi->fh, cache[fi->fh].inode_n, cache[fi->fh].file == NULL ? 0 : 1);
     if (fi->fh < 0 || fi->fh >= CACHED_COUNT
         || (opened = cache[fi->fh].file) == NULL)
                 return -ENOENT;
@@ -133,11 +138,99 @@ static int fuse_read(const char *path, char *buf, size_t size, off_t offset,
    return fs_io(opened, offset, size, buf, FS_IO_READ);
 }
 
+static int fuse_write(const char * path, const char * buf, size_t size, off_t offset,
+        struct fuse_file_info *fi){
+
+    opened_file *opened = NULL;
+    printf("TRY WRITE[%d/%d/%d]", fi->fh, cache[fi->fh].inode_n, cache[fi->fh].file == NULL ? 0 : 1);
+
+    if (fi->fh < 0 || fi->fh >= CACHED_COUNT
+        || (opened = cache[fi->fh].file) == NULL)
+                return -ENOENT;
+
+   return fs_io(opened, offset, size, buf, FS_IO_WRITE);
+}
+
+static int fuse_mknod(const char *path, mode_t mode, dev_t rdev)
+{
+    if (!S_ISREG(mode)){
+        return -EINVAL;
+    }
+
+    int len = strlen(path);
+    char *dir = (char *)malloc(len + 1),
+        *name = (char *)malloc(len + 1);
+
+    int i = len - 1, j = 0;
+    for (;i >= 0 && path[i] != '/'; i--);
+
+    while (j <= i){
+        dir[j] = path[j];
+        j++;
+    }
+    dir[j] = 0;
+
+    j = 0;
+    while (i + j + 1 < len){
+        name[j] = path[i+j+1];
+        j++;
+    }
+    name[j] = 0;
+
+    printf("dir : %s file : %s\n", dir, name);
+    int inode_n = fs_find_inode(fs, dir);
+    printf("inode: %d\n", inode_n);
+
+    if (inode_n < 0){
+        free(dir); free(name);
+        return -ENOENT;
+    }
+
+    opened_file *dirh = fs_open_inode(fs, inode_find(inode_n));
+    if (dirh == NULL){
+        free(dir); free(name);
+        return -EIO;
+    }
+
+    if (fs_find_file(dirh, name) >= 0){
+        free(dir); free(name); fs_close_file(dirh);
+        return -EEXIST;
+    }
+
+    opened_file *file = fs_create_file(fs);
+    file->inode->type = INODE_FILE;
+    fs_dir_add_file(dirh, name, file->inode->id);
+    fs_close_file(dirh);
+    fs_close_file(file);
+    free(dir);free(name);
+    fs_flush(fs);
+    return 0;
+
+}
+
+int fuse_rename(const char * old, const char *neww){
+    char old_path[255], old_name[255];
+    char new_path[255], new_name[255];
+
+    str_before_last(old, old_path, '/');
+    str_after_last(old, old_name, '/');
+    str_before_last(neww, new_path, '/');
+    str_after_last(neww, new_name, '/');
+
+    printf("orig: %s / %s\n", old, neww);
+    printf("new: %s / %s\n", new_name, new_path);
+    printf("old: %s / %s\n", old_name, old_path);
+    return 0;
+}
+
 static struct fuse_operations hello_oper = {
    .getattr   = fuse_getattr,
    .readdir   = fuse_readdir,
    .open     = fuse_open,
    .read     = fuse_read,
+   .write    = fuse_write,
+   .mknod    = fuse_mknod,
+   .rename  = fuse_rename
 };
 
 int fuse_init(fs_info *fs_info, int argc, char *argv[])
