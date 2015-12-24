@@ -5,11 +5,13 @@
 
 int main(int argc, char* argv[])
 {
-    //fuse_init(argc, argv);
+    device_init("device.txt");
+    fs_info *fs = fs_open();
+    return fuse_init(fs, argc, argv);
     //return 0;
     device_init("device.txt");
    // fs_create(1000, 1000);
-    fs_info *fs = fs_open();
+    fs = fs_open();
 
     int inode = fs_find_inode(fs, "/");
 

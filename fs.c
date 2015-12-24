@@ -86,6 +86,10 @@ void fs_flush(fs_info *info){
 }
 
 opened_file *fs_open_inode(fs_info *info, inode_t *inode){
+    if (inode == NULL){
+        return NULL;
+    }
+
     opened_file *handle = (opened_file *)malloc(sizeof(opened_file));
     handle->flushed = 1;
     handle->inode = inode;
