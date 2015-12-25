@@ -153,6 +153,19 @@ int fs_dir_add_file(opened_file *opened, char *name, int inode_n){
     return 1;
 }
 
+void fs_truncate(opened_file *opened){
+    opened->inode->size = 0;
+}
+
+void fs_save_dir(opened_file *opened, linked_file_list *list){
+    fs_truncate(opened);
+    linked_file_list *curr = list;
+    while (curr != NULL){
+        fs_dir_add_file(opened, curr->name, curr->inode_n);
+        curr = curr->next;
+    }
+}
+
 linked_file_list *fs_readdir(opened_file *opened){
     if (opened->inode->type != INODE_DIRECTORY){
         return NULL;
@@ -253,6 +266,20 @@ int fs_find_inode(fs_info *info, char *path){
     return found_inode;
 }
 
+opened_file *fs_find_open_inode(fs_info *info, char *path){
+    int inode_n = fs_find_inode(info, path);
+    if (inode_n < 0){
+        return NULL;
+    }
+
+    inode_t *inode = inode_find(inode_n);
+    if (inode == NULL){
+        return NULL;
+    }
+
+    return fs_open_inode(info, inode);
+}
+
 int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
     int tmp_ofs = offset % BLOCK_SIZE, bl_ofs = 0;
 
@@ -272,7 +299,6 @@ int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir){
         if (real_block < 0){
             return -1; // error
         }
-        printf("real: %d [%d] ", real_block, opened->inode->id);
 
         int from = pos % BLOCK_SIZE,
             count = BLOCK_SIZE;

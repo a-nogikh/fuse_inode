@@ -6,7 +6,7 @@
 int main(int argc, char* argv[])
 {
     device_init("device.txt");
-//    fs_create(2000, 2000);
+    fs_create(2000, 2000);
    fs_info *fss = fs_open();
     return fuse_init(fss, argc, argv);
 

@@ -108,7 +108,6 @@ static int fuse_open(const char *path, struct fuse_file_info *fi)
     opened_file *opened = NULL;
     if (cache[cache_id].inode_n != inode_n){
         inode_t *inode_s = inode_find(inode_n);
-        printf("[[%d/%d/%d]]", inode_n,inode_s->id, fs->root_inode->inode->id);
         opened = fs_open_inode(fs, inode_s);
         cache[cache_id].file = opened;
         cache[cache_id].inode_n = inode_n;
@@ -208,6 +207,7 @@ static int fuse_mknod(const char *path, mode_t mode, dev_t rdev)
 
 }
 
+// not tested
 int fuse_rename(const char * old, const char *neww){
     char old_path[255], old_name[255];
     char new_path[255], new_name[255];
@@ -216,6 +216,45 @@ int fuse_rename(const char * old, const char *neww){
     str_after_last(old, old_name, '/');
     str_before_last(neww, new_path, '/');
     str_after_last(neww, new_name, '/');
+
+    opened_file *orig_dir = fs_find_open_inode(fs,old_path),
+            *new_dir = fs_find_open_inode(fs,new_path);
+
+    int old_id = fs_find_file(orig_dir, old_name),
+        new_id = fs_find_file(new_dir, new_name);
+    if (old_id < 0){
+        fs_close_file(orig_dir);
+        fs_close_file(new_dir);
+        return -ENOENT;
+    }
+
+    if (new_id >= 0){
+        fs_close_file(orig_dir);
+        fs_close_file(new_dir);
+        return -EALREADY;
+    }
+
+    linked_file_list *list = fs_readdir(orig_dir), *curr = list, *now = NULL;
+    int found = 0;
+    while (curr != NULL){
+        if (curr->inode_n != old_id){
+            linked_file_list *item = (linked_file_list *)malloc(sizeof(linked_file_list));
+            item->inode_n = curr->inode_n;
+            item->name = strdup(curr->name);
+            if (now != NULL) now->next = item;
+            now = item;
+        }
+        curr = curr->next;
+    }
+
+    fs_save_dir(orig_dir, now);
+    fs_free_readdir(now);
+    fs_free_readdir(list);
+    fs_dir_add_file(new_dir, new_name, old_id);
+
+    fs_close_file(orig_dir);
+    fs_close_file(new_dir);
+    fs_flush(fs);
 
     printf("orig: %s / %s\n", old, neww);
     printf("new: %s / %s\n", new_name, new_path);

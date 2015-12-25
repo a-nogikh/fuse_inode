@@ -74,5 +74,6 @@ int fs_find_inode(fs_info *info, char *path);
 int fs_io(opened_file *opened, size_t offset, size_t count, char *buf, int dir);
 void fs_free_readdir(linked_file_list *list);
 opened_file *fs_create_file(fs_info *info);
+opened_file *fs_find_open_inode(fs_info *info, char *path);
 
 #endif // FS_H_INCLUDED
